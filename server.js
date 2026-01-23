@@ -144,6 +144,28 @@ app.post('/api/bolna-webhook', async (req, res) => {
     }
 });
 
+// Check Queue Status for AI
+app.get('/api/check-queue', async (req, res) => {
+    try {
+        const queueResult = await db.query('SELECT value FROM kv_store WHERE key = $1', ['queue_doctor']);
+        let doctorQueue = queueResult.rows.length > 0 ? queueResult.rows[0].value : [];
+        if (!Array.isArray(doctorQueue)) doctorQueue = [];
+
+        const queueLength = doctorQueue.length;
+        const estimatedWaitTimeMinutes = queueLength * 15;
+
+        res.json({
+            success: true,
+            total_waiting: queueLength,
+            estimated_wait_minutes: estimatedWaitTimeMinutes,
+            message: `There are currently ${queueLength} patients waiting. The estimated wait time is approximately ${estimatedWaitTimeMinutes} minutes.`
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 // Serve static files
 app.use(express.static('./'));
 
