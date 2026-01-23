@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Hospital LCNC</title>
+    <meta name="description" content="Hospital analytics and patient reports">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/activity.css">
+</head>
+
+<body>
+    <div class="page-wrapper">
+        <!-- Header -->
+        <header class="header">
+            <div class="container header-content">
+                <div class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <span class="logo-text">Hospital LCNC</span>
+                </div>
+                <nav class="nav" id="mainNav"></nav>
+                <div class="role-indicator" id="roleIndicator"></div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <h1 class="page-title" id="pageTitle">📊 Reports</h1>
+                    <p class="page-subtitle" id="pageSubtitle">
+                        View patient and activity reports
+                    </p>
+                </div>
+
+                <!-- Content based on role -->
+                <div id="reportsContent">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                Hospital LCNC Framework Demo | Simple Workflow System
+            </div>
+        </footer>
+    </div>
+
+    <script src="../js/common.js"></script>
+
+    <script>
+        // Queue keys (same as activity.js)
+        const QUEUE_KEYS = {
+            reception: 'queue_reception',
+            doctor: 'queue_doctor',
+            lab: 'queue_lab',
+            billing: 'queue_billing',
+            completed: 'queue_completed'
+        };
+
+        function getQueue(queueKey) {
+            return loadFromStorage(queueKey, []);
+        }
+
+        function getAllPatients() {
+            let all = [];
+            Object.values(QUEUE_KEYS).forEach(key => {
+                all = all.concat(getQueue(key));
+            });
+            return all;
+        }
+
+        function initReportsPage() {
+            initPage('reports');
+
+            const role = getCurrentRole();
+            const content = document.getElementById('reportsContent');
+            const title = document.getElementById('pageTitle');
+            const subtitle = document.getElementById('pageSubtitle');
+
+            // Get all patient data
+            const doctorQueue = getQueue(QUEUE_KEYS.doctor);
+            const labQueue = getQueue(QUEUE_KEYS.lab);
+            const completedQueue = getQueue(QUEUE_KEYS.completed);
+            const allPatients = getAllPatients();
+
+            // Count today's patients
+            const today = new Date().toDateString();
+            const todayPatients = allPatients.filter(p => {
+                return new Date(p.registeredAt).toDateString() === today;
+            });
+
+            // Build the reports content
+            content.innerHTML = `
+                <!-- Today's Summary -->
+                <div class="stats-summary">
+                    <div class="summary-card">
+                        <div class="summary-icon">📋</div>
+                        <div class="summary-value">${todayPatients.length}</div>
+                        <div class="summary-label">Today's Registrations</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">🩺</div>
+                        <div class="summary-value">${doctorQueue.length}</div>
+                        <div class="summary-label">Waiting for Doctor</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">🔬</div>
+                        <div class="summary-value">${labQueue.length}</div>
+                        <div class="summary-label">In Lab</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">✅</div>
+                        <div class="summary-value">${completedQueue.length}</div>
+                        <div class="summary-label">Completed</div>
+                    </div>
+                </div>
+                
+                <!-- Patient List -->
+                <div class="card mb-lg">
+                    <h3 class="card-title">📋 All Patients</h3>
+                    <p class="card-description">Complete list of registered patients</p>
+                    
+                    ${allPatients.length === 0 ? `
+                        <div class="queue-empty">
+                            <div class="queue-empty-icon">📭</div>
+                            <p>No patients registered yet. Register patients from the Reception activity.</p>
+                        </div>
+                    ` : `
+                        <div style="overflow-x: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Token</th>
+                                        <th>Name</th>
+                                        <th>Age/Gender</th>
+                                        <th>Complaint</th>
+                                        <th>Status</th>
+                                        <th>Registered</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${allPatients.map(p => `
+                                        <tr>
+                                            <td><span class="patient-token">#${p.token}</span></td>
+                                            <td><strong>${p.name}</strong></td>
+                                            <td>${p.age}y, ${p.gender}</td>
+                                            <td>${p.complaint.substring(0, 30)}${p.complaint.length > 30 ? '...' : ''}</td>
+                                            <td>${getStatusBadge(p.currentQueue)}</td>
+                                            <td>${formatDateTime(p.registeredAt)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `}
+                </div>
+                
+                <!-- Completed Patients with Details -->
+                <div class="card">
+                    <h3 class="card-title">✅ Completed Patients</h3>
+                    <p class="card-description">Patients who have completed their treatment</p>
+                    
+                    ${completedQueue.length === 0 ? `
+                        <div class="queue-empty">
+                            <div class="queue-empty-icon">📭</div>
+                            <p>No patients completed yet</p>
+                        </div>
+                    ` : `
+                        <div id="completedList">
+                            ${completedQueue.map(p => `
+                                <div class="patient-details" style="margin-bottom: 1rem;">
+                                    <div class="patient-details-header">
+                                        <div class="patient-avatar">👤</div>
+                                        <div class="patient-primary-info">
+                                            <h3>${p.name} <span class="patient-token">#${p.token}</span></h3>
+                                            <p>${p.age}y, ${p.gender} • ${p.phone}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="patient-details-grid">
+                                        <div class="detail-item">
+                                            <div class="detail-label">Complaint</div>
+                                            <div class="detail-value">${p.complaint}</div>
+                                        </div>
+                                        <div class="detail-item">
+                                            <div class="detail-label">Diagnosis</div>
+                                            <div class="detail-value">${p.diagnosis || 'N/A'}</div>
+                                        </div>
+                                        <div class="detail-item">
+                                            <div class="detail-label">Prescription</div>
+                                            <div class="detail-value">${p.prescription || 'N/A'}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    ${p.history ? `
+                                        <details style="margin-top: 1rem;">
+                                            <summary style="cursor: pointer; color: var(--primary-light);">View Journey (${p.history.length} steps)</summary>
+                                            <div style="margin-top: 0.5rem;">
+                                                ${p.history.map(h => `
+                                                    <div style="padding: 0.5rem; background: var(--bg-card); border-radius: 4px; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                                                        <strong>${h.action}</strong> by ${h.by} • ${formatDateTime(h.time)}
+                                                        ${h.notes ? `<br><span style="color: var(--text-muted);">${h.notes}</span>` : ''}
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </details>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        // Check if DOM is already ready, otherwise wait for DOMContentLoaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', async () => {
+                await initRemoteStorage();
+                initReportsPage();
+            });
+        } else {
+            // DOM is already ready, initialize immediately
+            (async () => {
+                await initRemoteStorage();
+                initReportsPage();
+            })();
+        }
+
+        function getStatusBadge(queueKey) {
+            const statusMap = {
+                'queue_doctor': '<span class="status-badge waiting">🩺 With Doctor</span>',
+                'queue_lab': '<span class="status-badge in-progress">🔬 In Lab</span>',
+                'queue_completed': '<span class="status-badge completed">✅ Completed</span>',
+                'queue_billing': '<span class="status-badge waiting">💰 Billing</span>'
+            };
+            return statusMap[queueKey] || '<span class="status-badge">Unknown</span>';
+        }
+
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+    </script>
+</body>
+
+</html>

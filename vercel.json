@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+        {
+            "source": "/api/store/:key*",
+            "destination": "/api/store"
+        }
+    ]
+}

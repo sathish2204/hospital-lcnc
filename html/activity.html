@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity - Hospital LCNC</title>
+    <meta name="description" content="Hospital Activity Management - Role-based patient workflow">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/activity.css">
+</head>
+<body>
+    <div class="page-wrapper">
+        <!-- Header -->
+        <header class="header">
+            <div class="container header-content">
+                <div class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <span class="logo-text">Hospital LCNC</span>
+                </div>
+                
+                <nav class="nav" id="mainNav"></nav>
+                
+                <div class="role-indicator" id="roleIndicator"></div>
+            </div>
+        </header>
+
+        <!-- Main Content - Role-specific activity -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <h1 class="page-title" id="activityTitle">📋 Activity</h1>
+                    <p class="page-subtitle" id="activitySubtitle">Your work queue</p>
+                </div>
+
+                <!-- Activity Content - Rendered based on role -->
+                <div id="activityContent">
+                    <!-- Content is dynamically loaded based on role -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                Hospital LCNC Framework Demo | Simple Workflow System
+            </div>
+        </footer>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script src="../js/activity.js"></script>
+</body>
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Builder - Hospital LCNC</title>
+    <meta name="description" content="Visual workflow builder for patient journey configuration">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+
+<body>
+    <!--
+    =====================================================
+    WORKFLOW BUILDER - VISUAL PATIENT JOURNEY
+    =====================================================
+    
+    LCNC CONCEPT: This demonstrates how hospital staff can configure
+    patient workflows through a visual interface. Steps can be
+    reordered, added, or removed without writing code.
+    
+    HOW IT WORKS:
+    1. Workflow is displayed as connected blocks with arrows
+    2. Each step can be moved up/down to change order
+    3. New steps can be added
+    4. Workflow is saved as an ordered JSON array
+    
+    REAL-WORLD APPLICATION:
+    - Different departments may have different workflows
+    - Emergency vs routine patient flows
+    - Integration with appointment scheduling
+    - Automatic status updates at each step
+    =====================================================
+    -->
+
+    <div class="page-wrapper">
+        <!-- Header -->
+        <header class="header">
+            <div class="container header-content">
+                <div class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <span class="logo-text">Hospital LCNC</span>
+                </div>
+                <nav class="nav" id="mainNav"></nav>
+                <div class="role-indicator" id="roleIndicator"></div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <h1 class="page-title">🔄 Workflow Builder</h1>
+                    <p class="page-subtitle">
+                        Design the patient journey from registration to follow-up.
+                        Drag steps to reorder or use the buttons to configure the flow.
+                    </p>
+                </div>
+
+                <!-- Workflow Visualization -->
+                <div class="card mb-lg">
+                    <h3 class="card-title" style="margin-bottom: var(--spacing-lg);">Patient Journey Flow</h3>
+
+                    <div class="workflow-container" id="workflowContainer">
+                        <!-- Workflow steps will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Add New Step -->
+                <div class="card mb-lg">
+                    <h3 class="card-title">➕ Add New Step</h3>
+                    <div class="flex gap-md" style="flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 200px;">
+                            <label class="form-label">Step Name</label>
+                            <input type="text" class="form-input" id="newStepName" placeholder="e.g., X-Ray">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 200px;">
+                            <label class="form-label">Icon (Emoji)</label>
+                            <input type="text" class="form-input" id="newStepIcon" placeholder="e.g., 🩻">
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <button class="btn btn-primary" onclick="addStep()">Add Step</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="flex gap-md mb-lg" style="flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-lg" onclick="saveWorkflow()">
+                        💾 Save Workflow
+                    </button>
+                    <button class="btn btn-secondary btn-lg" onclick="resetToDefault()">
+                        🔄 Reset to Default
+                    </button>
+                    <button class="btn btn-success btn-lg" onclick="simulatePatientFlow()">
+                        ▶️ Simulate Flow
+                    </button>
+                </div>
+
+                <!-- Workflow as List View -->
+                <div class="card mb-lg">
+                    <h3 class="card-title">📋 Step Details</h3>
+                    <div id="stepsList">
+                        <!-- Steps list will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- JSON Schema Preview -->
+                <div class="card">
+                    <h3 class="card-title">📄 Workflow Schema (JSON)</h3>
+                    <p class="card-description">
+                        The workflow is stored as an ordered array. Position in array = order of steps.
+                    </p>
+                    <pre id="schemaPreview"
+                        style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); overflow-x: auto; font-size: 0.8rem; color: var(--text-secondary);"></pre>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                Hospital LCNC Framework Demo | Hackathon 2026
+            </div>
+        </footer>
+    </div>
+
+    <script src="../js/common.js"></script>
+
+    <script>
+        /**
+         * Workflow Builder Page
+         * 
+         * LCNC CONCEPT: Workflows are defined visually as connected steps.
+         * The order of steps is stored as an array, making it easy to
+         * render, modify, and execute the workflow.
+         */
+
+        // Current workflow steps
+        let workflowSteps = [];
+
+        /**
+         * Initialize the page
+         */
+        document.addEventListener('DOMContentLoaded', async function () {
+            await initRemoteStorage();
+            initPage('workflow');
+            loadWorkflow();
+            renderWorkflow();
+        });
+
+        /**
+         * Load saved workflow from localStorage
+         */
+        function loadWorkflow() {
+            workflowSteps = getWorkflow();
+        }
+
+        /**
+         * Render the visual workflow with arrows
+         */
+        function renderWorkflow() {
+            const container = document.getElementById('workflowContainer');
+            container.innerHTML = '';
+
+            workflowSteps.forEach((step, index) => {
+                // Create step block
+                const stepEl = document.createElement('div');
+                stepEl.className = 'workflow-step';
+
+                stepEl.innerHTML = `
+                    <div class="step-block">
+                        <div class="step-block-header">
+                            <span class="step-number">${index + 1}</span>
+                            <span style="font-size: 1.5rem;">${step.icon}</span>
+                        </div>
+                        <div class="step-name">${step.name}</div>
+                        <div class="step-controls">
+                            <button class="btn" onclick="moveStep(${index}, -1)" ${index === 0 ? 'disabled' : ''}>←</button>
+                            <button class="btn" onclick="deleteStep(${index})">🗑️</button>
+                            <button class="btn" onclick="moveStep(${index}, 1)" ${index === workflowSteps.length - 1 ? 'disabled' : ''}>→</button>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(stepEl);
+
+                // Add arrow between steps (but not after the last one)
+                if (index < workflowSteps.length - 1) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'workflow-arrow';
+                    arrow.textContent = '→';
+                    container.appendChild(arrow);
+                }
+            });
+
+            renderStepsList();
+            updateSchemaPreview();
+        }
+
+        /**
+         * Render the detailed steps list
+         */
+        function renderStepsList() {
+            const list = document.getElementById('stepsList');
+            list.innerHTML = '';
+
+            if (workflowSteps.length === 0) {
+                list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: var(--spacing-lg);">No steps in workflow. Add steps above.</p>';
+                return;
+            }
+
+            workflowSteps.forEach((step, index) => {
+                const item = document.createElement('div');
+                item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: var(--spacing-sm);';
+
+                item.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                        <span style="background: var(--primary-gradient); padding: var(--spacing-xs) var(--spacing-sm); border-radius: var(--radius-full); font-size: 0.75rem;">${index + 1}</span>
+                        <span style="font-size: 1.25rem;">${step.icon}</span>
+                        <span style="font-weight: 500;">${step.name}</span>
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-xs);">
+                        <button class="btn btn-sm btn-secondary" onclick="moveStep(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="btn btn-sm btn-secondary" onclick="moveStep(${index}, 1)" ${index === workflowSteps.length - 1 ? 'disabled' : ''}>↓</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteStep(${index})">🗑️</button>
+                    </div>
+                `;
+
+                list.appendChild(item);
+            });
+        }
+
+        /**
+         * Add a new step to the workflow
+         * 
+         * LCNC CONCEPT: Users can extend workflows by adding steps
+         * through a simple form interface.
+         */
+        function addStep() {
+            const name = document.getElementById('newStepName').value.trim();
+            const icon = document.getElementById('newStepIcon').value.trim() || '📌';
+
+            if (!name) {
+                showNotification('Please enter a step name', 'error');
+                return;
+            }
+
+            const newStep = {
+                id: 'step_' + Date.now(),
+                name: name,
+                icon: icon
+            };
+
+            workflowSteps.push(newStep);
+
+            // Clear inputs
+            document.getElementById('newStepName').value = '';
+            document.getElementById('newStepIcon').value = '';
+
+            renderWorkflow();
+            showNotification(`Added "${name}" to workflow`, 'success');
+        }
+
+        /**
+         * Move a step up or down in the order
+         */
+        function moveStep(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= workflowSteps.length) return;
+
+            // Swap steps
+            const temp = workflowSteps[index];
+            workflowSteps[index] = workflowSteps[newIndex];
+            workflowSteps[newIndex] = temp;
+
+            renderWorkflow();
+        }
+
+        /**
+         * Delete a step from the workflow
+         */
+        function deleteStep(index) {
+            const step = workflowSteps[index];
+            workflowSteps.splice(index, 1);
+            renderWorkflow();
+            showNotification(`Removed "${step.name}" from workflow`, 'info');
+        }
+
+        /**
+         * Save the workflow to localStorage
+         */
+        function saveWorkflow() {
+            saveToStorage('patientWorkflow', workflowSteps);
+            showNotification('✓ Workflow saved successfully!', 'success');
+        }
+
+        /**
+         * Reset to default workflow
+         */
+        function resetToDefault() {
+            workflowSteps = [
+                { id: 'registration', name: 'Registration', icon: '📋' },
+                { id: 'consultation', name: 'Consultation', icon: '👨‍⚕️' },
+                { id: 'lab', name: 'Lab Tests', icon: '🔬' },
+                { id: 'billing', name: 'Billing', icon: '💰' },
+                { id: 'followup', name: 'Follow-up', icon: '📅' }
+            ];
+
+            renderWorkflow();
+            showNotification('🔄 Reset to default workflow', 'info');
+        }
+
+        /**
+         * Simulate a patient going through the workflow
+         * 
+         * LCNC CONCEPT: This demonstrates how the workflow would execute
+         * in a real system, showing step-by-step progression.
+         */
+        function simulatePatientFlow() {
+            if (workflowSteps.length === 0) {
+                showNotification('No workflow steps to simulate', 'error');
+                return;
+            }
+
+            let delay = 0;
+            workflowSteps.forEach((step, index) => {
+                setTimeout(() => {
+                    showNotification(`${step.icon} Patient at: ${step.name} (Step ${index + 1}/${workflowSteps.length})`, 'info', 1500);
+                }, delay);
+                delay += 1500;
+            });
+
+            setTimeout(() => {
+                showNotification('✅ Patient workflow completed!', 'success');
+            }, delay);
+        }
+
+        /**
+         * Update the JSON schema preview
+         */
+        function updateSchemaPreview() {
+            const preview = document.getElementById('schemaPreview');
+            preview.textContent = JSON.stringify(workflowSteps, null, 2);
+        }
+    </script>
+</body>
+
+</html>

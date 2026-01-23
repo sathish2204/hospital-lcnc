@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rules Engine - Hospital LCNC</title>
+    <meta name="description" content="IF-THEN business rules configuration for hospital automation">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+
+<body>
+    <!--
+    =====================================================
+    RULES ENGINE - CONFIGURABLE BUSINESS LOGIC
+    =====================================================
+    
+    LCNC CONCEPT: This demonstrates how business rules can be
+    configured through a visual interface instead of writing code.
+    
+    HOW IT WORKS:
+    1. Users create IF-THEN rules using dropdowns
+    2. Rules are stored as JSON objects
+    3. Rules can be tested with simulated data
+    4. In production, rules would execute automatically
+    
+    EXAMPLE RULES:
+    - IF Age > 60 THEN Apply Senior Discount
+    - IF Payment Status = Unpaid THEN Block Discharge
+    - IF Lab Result = Positive THEN Schedule Follow-up
+    
+    REAL-WORLD APPLICATION:
+    - Automated billing discounts
+    - Clinical decision support
+    - Compliance enforcement
+    - Alert generation
+    =====================================================
+    -->
+
+    <div class="page-wrapper">
+        <!-- Header -->
+        <header class="header">
+            <div class="container header-content">
+                <div class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <span class="logo-text">Hospital LCNC</span>
+                </div>
+                <nav class="nav" id="mainNav"></nav>
+                <div class="role-indicator" id="roleIndicator"></div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <h1 class="page-title">⚡ Rules Engine</h1>
+                    <p class="page-subtitle">
+                        Create IF-THEN business rules for automated actions.
+                        No coding required - just configure conditions and actions.
+                    </p>
+                </div>
+
+                <!-- Rule Creator -->
+                <div class="rule-builder">
+                    <h3 class="card-title" style="margin-bottom: var(--spacing-lg);">➕ Create New Rule</h3>
+
+                    <div class="rule-row">
+                        <div class="rule-keyword">IF</div>
+                        <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                            <select class="form-select" id="ruleField">
+                                <option value="">Select Field</option>
+                                <option value="age">Patient Age</option>
+                                <option value="paymentStatus">Payment Status</option>
+                                <option value="labResult">Lab Result</option>
+                                <option value="visitType">Visit Type</option>
+                                <option value="department">Department</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+                            <select class="form-select" id="ruleCondition">
+                                <option value="">Condition</option>
+                                <option value=">">is greater than</option>
+                                <option value="<">is less than</option>
+                                <option value="=">equals</option>
+                                <option value="unpaid">is unpaid</option>
+                                <option value="positive">is positive</option>
+                                <option value="negative">is negative</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 100px; margin-bottom: 0;">
+                            <input type="text" class="form-input" id="ruleValue" placeholder="Value">
+                        </div>
+                    </div>
+
+                    <div class="rule-row">
+                        <div class="rule-keyword" style="background: linear-gradient(135deg, #48bb78, #38a169);">THEN
+                        </div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <select class="form-select" id="ruleAction">
+                                <option value="">Select Action</option>
+                                <option value="applyDiscount">Apply Senior Discount (10%)</option>
+                                <option value="scheduleFollowup">Schedule Follow-up Appointment</option>
+                                <option value="blockDischarge">Block Discharge</option>
+                                <option value="sendAlert">Send Alert to Doctor</option>
+                                <option value="prioritize">Mark as Priority Case</option>
+                                <option value="assignBed">Auto-assign Bed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-md mt-md" style="flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="addRule()">
+                            ➕ Add Rule
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearRuleForm()">
+                            🗑️ Clear Form
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active Rules -->
+                <div class="card mb-lg">
+                    <div class="flex-between mb-md">
+                        <h3 class="card-title" style="margin-bottom: 0;">📋 Active Rules</h3>
+                        <span id="ruleCount" style="color: var(--text-muted); font-size: 0.875rem;">0 rules</span>
+                    </div>
+
+                    <div class="rules-list" id="rulesList">
+                        <div style="text-align: center; padding: var(--spacing-xl); color: var(--text-muted);">
+                            <div style="font-size: 2rem; margin-bottom: var(--spacing-sm);">📜</div>
+                            <p>No rules configured yet. Create a rule above.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rule Testing -->
+                <div class="card mb-lg">
+                    <h3 class="card-title">🧪 Test Rules</h3>
+                    <p class="card-description">
+                        Enter test data to see which rules would trigger.
+                    </p>
+
+                    <div class="flex gap-md" style="flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label class="form-label">Patient Age</label>
+                            <input type="number" class="form-input" id="testAge" value="65">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label class="form-label">Payment Status</label>
+                            <select class="form-select" id="testPayment">
+                                <option value="paid">Paid</option>
+                                <option value="unpaid">Unpaid</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label class="form-label">Lab Result</label>
+                            <select class="form-select" id="testLabResult">
+                                <option value="negative">Negative</option>
+                                <option value="positive">Positive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-success" onclick="testRules()">
+                        ▶️ Run Rules
+                    </button>
+
+                    <div id="testResults" class="mt-md" style="display: none;">
+                        <h4 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: var(--spacing-sm);">
+                            Results:</h4>
+                        <div id="testResultsContent"></div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-md mb-lg" style="flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-lg" onclick="saveRules()">
+                        💾 Save Rules
+                    </button>
+                    <button class="btn btn-secondary btn-lg" onclick="loadSampleRules()">
+                        📋 Load Sample Rules
+                    </button>
+                </div>
+
+                <!-- JSON Preview -->
+                <div class="card">
+                    <h3 class="card-title">📄 Rules Schema (JSON)</h3>
+                    <p class="card-description">
+                        Rules are stored as JSON objects. This schema can be used to execute rules
+                        programmatically without hardcoding logic.
+                    </p>
+                    <pre id="schemaPreview"
+                        style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); overflow-x: auto; font-size: 0.8rem; color: var(--text-secondary); max-height: 200px;"></pre>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                Hospital LCNC Framework Demo | Hackathon 2026
+            </div>
+        </footer>
+    </div>
+
+    <script src="../js/common.js"></script>
+
+    <script>
+        /**
+         * Rules Engine Page
+         * 
+         * LCNC CONCEPT: Business rules are defined through UI, not code.
+         * Each rule has a condition (IF) and an action (THEN).
+         * The rules engine evaluates conditions and executes actions.
+         */
+
+        // Current rules
+        let rules = [];
+
+        // Field and Action Labels for display
+        const fieldLabels = {
+            age: 'Patient Age',
+            paymentStatus: 'Payment Status',
+            labResult: 'Lab Result',
+            visitType: 'Visit Type',
+            department: 'Department'
+        };
+
+        const conditionLabels = {
+            '>': 'is greater than',
+            '<': 'is less than',
+            '=': 'equals',
+            'unpaid': 'is unpaid',
+            'positive': 'is positive',
+            'negative': 'is negative'
+        };
+
+        const actionLabels = {
+            applyDiscount: 'Apply Senior Discount (10%)',
+            scheduleFollowup: 'Schedule Follow-up Appointment',
+            blockDischarge: 'Block Discharge',
+            sendAlert: 'Send Alert to Doctor',
+            prioritize: 'Mark as Priority Case',
+            assignBed: 'Auto-assign Bed'
+        };
+
+        /**
+         * Initialize the page
+         */
+        document.addEventListener('DOMContentLoaded', async function () {
+            await initRemoteStorage();
+            initPage('rules');
+            loadRulesFromStorage();
+            renderRules();
+        });
+
+        /**
+         * Load saved rules from localStorage
+         */
+        function loadRulesFromStorage() {
+            rules = getRules();
+        }
+
+        /**
+         * Add a new rule
+         * 
+         * LCNC CONCEPT: Rules are created through form inputs,
+         * validated, and stored as structured data.
+         */
+        function addRule() {
+            const field = document.getElementById('ruleField').value;
+            const condition = document.getElementById('ruleCondition').value;
+            const value = document.getElementById('ruleValue').value;
+            const action = document.getElementById('ruleAction').value;
+
+            // Validation
+            if (!field) {
+                showNotification('Please select a field', 'error');
+                return;
+            }
+            if (!condition) {
+                showNotification('Please select a condition', 'error');
+                return;
+            }
+            if (!action) {
+                showNotification('Please select an action', 'error');
+                return;
+            }
+
+            // Some conditions don't need a value
+            const needsValue = ['>', '<', '='].includes(condition);
+            if (needsValue && !value) {
+                showNotification('Please enter a value', 'error');
+                return;
+            }
+
+            const newRule = {
+                id: 'rule_' + Date.now(),
+                field: field,
+                condition: condition,
+                value: needsValue ? value : '',
+                action: action,
+                enabled: true
+            };
+
+            rules.push(newRule);
+            clearRuleForm();
+            renderRules();
+
+            showNotification('✓ Rule added successfully', 'success');
+        }
+
+        /**
+         * Clear the rule creation form
+         */
+        function clearRuleForm() {
+            document.getElementById('ruleField').value = '';
+            document.getElementById('ruleCondition').value = '';
+            document.getElementById('ruleValue').value = '';
+            document.getElementById('ruleAction').value = '';
+        }
+
+        /**
+         * Render the rules list
+         */
+        function renderRules() {
+            const container = document.getElementById('rulesList');
+            const countEl = document.getElementById('ruleCount');
+
+            countEl.textContent = `${rules.length} rule${rules.length !== 1 ? 's' : ''}`;
+
+            if (rules.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: var(--spacing-xl); color: var(--text-muted);">
+                        <div style="font-size: 2rem; margin-bottom: var(--spacing-sm);">📜</div>
+                        <p>No rules configured yet. Create a rule above.</p>
+                    </div>
+                `;
+                updateSchemaPreview();
+                return;
+            }
+
+            container.innerHTML = '';
+
+            rules.forEach((rule, index) => {
+                const ruleEl = document.createElement('div');
+                ruleEl.className = 'rule-item';
+
+                // Build rule text
+                const fieldText = fieldLabels[rule.field] || rule.field;
+                const condText = conditionLabels[rule.condition] || rule.condition;
+                const valueText = rule.value ? ` "${rule.value}"` : '';
+                const actionText = actionLabels[rule.action] || rule.action;
+
+                ruleEl.innerHTML = `
+                    <div class="rule-text">
+                        <span style="opacity: 0.7;">IF</span>
+                        <strong>${fieldText}</strong>
+                        ${condText}${valueText}
+                        <span style="opacity: 0.7;">THEN</span>
+                        <strong style="color: var(--secondary-color);">${actionText}</strong>
+                    </div>
+                    <div class="rule-actions">
+                        <button class="btn btn-sm ${rule.enabled ? 'btn-success' : 'btn-secondary'}" 
+                                onclick="toggleRule(${index})">
+                            ${rule.enabled ? '✓ Enabled' : '✕ Disabled'}
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteRule(${index})">
+                            🗑️
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(ruleEl);
+            });
+
+            updateSchemaPreview();
+        }
+
+        /**
+         * Toggle a rule's enabled state
+         */
+        function toggleRule(index) {
+            rules[index].enabled = !rules[index].enabled;
+            renderRules();
+        }
+
+        /**
+         * Delete a rule
+         */
+        function deleteRule(index) {
+            rules.splice(index, 1);
+            renderRules();
+            showNotification('Rule deleted', 'info');
+        }
+
+        /**
+         * Test rules with sample data
+         * 
+         * LCNC CONCEPT: Users can test rules before deployment
+         * to ensure they work as expected.
+         */
+        function testRules() {
+            const testData = {
+                age: parseInt(document.getElementById('testAge').value) || 0,
+                paymentStatus: document.getElementById('testPayment').value,
+                labResult: document.getElementById('testLabResult').value
+            };
+
+            const resultsContainer = document.getElementById('testResults');
+            const resultsContent = document.getElementById('testResultsContent');
+
+            resultsContainer.style.display = 'block';
+
+            const enabledRules = rules.filter(r => r.enabled);
+
+            if (enabledRules.length === 0) {
+                resultsContent.innerHTML = '<p style="color: var(--text-muted);">No enabled rules to test.</p>';
+                return;
+            }
+
+            let triggeredRules = [];
+
+            enabledRules.forEach(rule => {
+                let triggered = false;
+
+                switch (rule.condition) {
+                    case '>':
+                        triggered = testData[rule.field] > parseFloat(rule.value);
+                        break;
+                    case '<':
+                        triggered = testData[rule.field] < parseFloat(rule.value);
+                        break;
+                    case '=':
+                        triggered = String(testData[rule.field]) === String(rule.value);
+                        break;
+                    case 'unpaid':
+                        triggered = testData[rule.field] === 'unpaid';
+                        break;
+                    case 'positive':
+                        triggered = testData[rule.field] === 'positive';
+                        break;
+                    case 'negative':
+                        triggered = testData[rule.field] === 'negative';
+                        break;
+                }
+
+                if (triggered) {
+                    triggeredRules.push(rule);
+                }
+            });
+
+            if (triggeredRules.length === 0) {
+                resultsContent.innerHTML = `
+                    <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md); color: var(--text-secondary);">
+                        ✓ No rules triggered for this test data.
+                    </div>
+                `;
+            } else {
+                resultsContent.innerHTML = triggeredRules.map(rule => `
+                    <div style="padding: var(--spacing-md); background: rgba(72, 187, 120, 0.1); border-left: 3px solid var(--secondary-color); border-radius: var(--radius-md); margin-bottom: var(--spacing-sm);">
+                        <strong style="color: var(--secondary-color);">⚡ ACTION:</strong> ${actionLabels[rule.action]}
+                    </div>
+                `).join('');
+
+                // Show alert for demonstration
+                showNotification(`${triggeredRules.length} rule(s) triggered!`, 'success');
+            }
+        }
+
+        /**
+         * Save rules to localStorage
+         */
+        function saveRules() {
+            saveToStorage('businessRules', rules);
+            showNotification('✓ Rules saved successfully!', 'success');
+        }
+
+        /**
+         * Load sample rules for demonstration
+         */
+        function loadSampleRules() {
+            rules = [
+                {
+                    id: 'rule_sample_1',
+                    field: 'age',
+                    condition: '>',
+                    value: '60',
+                    action: 'applyDiscount',
+                    enabled: true
+                },
+                {
+                    id: 'rule_sample_2',
+                    field: 'paymentStatus',
+                    condition: 'unpaid',
+                    value: '',
+                    action: 'blockDischarge',
+                    enabled: true
+                },
+                {
+                    id: 'rule_sample_3',
+                    field: 'labResult',
+                    condition: 'positive',
+                    value: '',
+                    action: 'scheduleFollowup',
+                    enabled: true
+                }
+            ];
+
+            renderRules();
+            showNotification('📋 Sample rules loaded', 'success');
+        }
+
+        /**
+         * Update the JSON schema preview
+         */
+        function updateSchemaPreview() {
+            const preview = document.getElementById('schemaPreview');
+            preview.textContent = JSON.stringify(rules, null, 2);
+        }
+    </script>
+</body>
+
+</html>

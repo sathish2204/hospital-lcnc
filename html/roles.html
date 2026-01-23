@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role-Based Access - Hospital LCNC</title>
+    <meta name="description" content="Configure role permissions and simulate user access">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+
+<body>
+    <!--
+    =====================================================
+    ROLE-BASED ACCESS CONTROL (RBAC)
+    =====================================================
+    
+    LCNC CONCEPT: This demonstrates how administrators can configure
+    who has access to what through a visual interface.
+    
+    HOW IT WORKS:
+    1. Define roles (Receptionist, Doctor, Lab Tech, Admin)
+    2. Map roles to allowed modules using checkboxes
+    3. Simulate login by selecting a role
+    4. Navigation adapts based on role permissions
+    
+    WHY THIS MATTERS:
+    - Security through configuration, not code
+    - Easy to add new roles
+    - Easy to modify permissions
+    - Audit trail of who can access what
+    =====================================================
+    -->
+
+    <div class="page-wrapper">
+        <!-- Header -->
+        <header class="header">
+            <div class="container header-content">
+                <div class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <span class="logo-text">Hospital LCNC</span>
+                </div>
+                <nav class="nav" id="mainNav"></nav>
+                <div class="role-indicator" id="roleIndicator"></div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <h1 class="page-title">🔐 Role-Based Access Control</h1>
+                    <p class="page-subtitle">
+                        Configure which roles can access which modules.
+                        Test access by simulating login as different roles.
+                    </p>
+                </div>
+
+                <!-- Role Simulator -->
+                <div class="card mb-lg"
+                    style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));">
+                    <h3 class="card-title">🎭 Simulate Login</h3>
+                    <p class="card-description">
+                        Select a role to see how the navigation changes. This simulates logging in as different users.
+                    </p>
+                    <div class="flex gap-md" style="flex-wrap: wrap; align-items: center;">
+                        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                            <select class="form-select" id="roleSelector" onchange="simulateLogin()">
+                                <option value="admin">👑 Admin</option>
+                                <option value="doctor">👨‍⚕️ Doctor</option>
+                                <option value="receptionist">👩‍💼 Receptionist</option>
+                                <option value="lab_technician">🔬 Lab Technician</option>
+                            </select>
+                        </div>
+                        <div>
+                            <span id="accessSummary" style="color: var(--text-secondary); font-size: 0.875rem;">
+                                Currently logged in as: <strong>Admin</strong>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Role Permission Cards -->
+                <h3 style="margin-bottom: var(--spacing-lg);">👥 Role Permissions</h3>
+                <div class="roles-grid mb-lg" id="rolesGrid">
+                    <!-- Role cards will be rendered here -->
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-md mb-lg" style="flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-lg" onclick="savePermissions()">
+                        💾 Save Permissions
+                    </button>
+                    <button class="btn btn-secondary btn-lg" onclick="resetToDefaults()">
+                        🔄 Reset to Defaults
+                    </button>
+                </div>
+
+                <!-- Access Matrix Table -->
+                <div class="card mb-lg">
+                    <h3 class="card-title">📊 Access Matrix</h3>
+                    <p class="card-description">
+                        Quick overview of which roles can access which modules.
+                    </p>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="accessMatrix">
+                            <!-- Matrix will be rendered here -->
+                        </table>
+                    </div>
+                </div>
+
+                <!-- JSON Preview -->
+                <div class="card">
+                    <h3 class="card-title">📄 Permissions Schema (JSON)</h3>
+                    <p class="card-description">
+                        Role permissions are stored as a configuration object.
+                        Each role maps to an array of allowed module IDs.
+                    </p>
+                    <pre id="schemaPreview"
+                        style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); overflow-x: auto; font-size: 0.8rem; color: var(--text-secondary); max-height: 300px;"></pre>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                Hospital LCNC Framework Demo | Hackathon 2026
+            </div>
+        </footer>
+    </div>
+
+    <script src="../js/common.js"></script>
+
+    <script>
+        /**
+         * Role-Based Access Control Page
+         * 
+         * LCNC CONCEPT: Access control is configured through checkboxes,
+         * not code. Administrators can easily modify who can access what.
+         */
+
+        // Role definitions
+        const ROLES = [
+            { id: 'admin', name: 'Admin', icon: '👑', color: '#667eea' },
+            { id: 'doctor', name: 'Doctor', icon: '👨‍⚕️', color: '#48bb78' },
+            { id: 'receptionist', name: 'Receptionist', icon: '👩‍💼', color: '#ed8936' },
+            { id: 'lab_technician', name: 'Lab Technician', icon: '🔬', color: '#4299e1' }
+        ];
+
+        // Module definitions
+        const MODULES = [
+            { id: 'dashboard', name: 'Dashboard', icon: '🏠' },
+            { id: 'modules', name: 'Module Selector', icon: '📦' },
+            { id: 'form-builder', name: 'Form Builder', icon: '📝' },
+            { id: 'workflow', name: 'Workflow Builder', icon: '🔄' },
+            { id: 'rules', name: 'Rules Engine', icon: '⚡' },
+            { id: 'roles', name: 'Role Management', icon: '🔐' },
+            { id: 'reports', name: 'Reports', icon: '📊' }
+        ];
+
+        // Current permissions
+        let permissions = {};
+
+        /**
+         * Initialize the page
+         */
+        document.addEventListener('DOMContentLoaded', async function () {
+            await initRemoteStorage();
+            initPage('roles');
+            loadPermissions();
+            renderRoleCards();
+            renderAccessMatrix();
+            updateRoleSelector();
+        });
+
+        /**
+         * Load saved permissions or use defaults
+         */
+        function loadPermissions() {
+            permissions = getRolePermissions();
+        }
+
+        /**
+         * Render role cards with permission checkboxes
+         */
+        function renderRoleCards() {
+            const grid = document.getElementById('rolesGrid');
+            grid.innerHTML = '';
+
+            ROLES.forEach(role => {
+                const roleConfig = permissions[role.id] || { modules: [] };
+
+                const card = document.createElement('div');
+                card.className = 'role-card';
+
+                card.innerHTML = `
+                    <div class="role-header">
+                        <div class="role-icon" style="background: ${role.color};">${role.icon}</div>
+                        <div>
+                            <div class="role-name">${role.name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">
+                                ${roleConfig.modules.length} modules
+                            </div>
+                        </div>
+                    </div>
+                    <div class="permissions-list">
+                        ${MODULES.map(module => `
+                            <label class="permission-item">
+                                <input type="checkbox" 
+                                       ${roleConfig.modules.includes(module.id) ? 'checked' : ''}
+                                       onchange="togglePermission('${role.id}', '${module.id}')">
+                                <span>${module.icon} ${module.name}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        /**
+         * Toggle a permission for a role
+         * 
+         * LCNC CONCEPT: Permission changes are as simple as
+         * checking/unchecking a box.
+         */
+        function togglePermission(roleId, moduleId) {
+            if (!permissions[roleId]) {
+                permissions[roleId] = { name: roleId, icon: '👤', modules: [] };
+            }
+
+            const modules = permissions[roleId].modules;
+            const index = modules.indexOf(moduleId);
+
+            if (index > -1) {
+                modules.splice(index, 1);
+            } else {
+                modules.push(moduleId);
+            }
+
+            renderRoleCards();
+            renderAccessMatrix();
+            updateSchemaPreview();
+
+            // If changing permissions for current role, update nav
+            if (roleId === getCurrentRole()) {
+                renderNavigation('roles');
+            }
+        }
+
+        /**
+         * Render the access matrix table
+         */
+        function renderAccessMatrix() {
+            const table = document.getElementById('accessMatrix');
+
+            let html = `
+                <thead>
+                    <tr>
+                        <th>Module</th>
+                        ${ROLES.map(r => `<th style="text-align: center;">${r.icon}<br>${r.name}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            MODULES.forEach(module => {
+                html += `<tr>
+                    <td>${module.icon} ${module.name}</td>
+                    ${ROLES.map(role => {
+                    const hasAccess = permissions[role.id]?.modules.includes(module.id);
+                    return `<td style="text-align: center; color: ${hasAccess ? 'var(--secondary-color)' : 'var(--danger-color)'}">
+                            ${hasAccess ? '✓' : '✕'}
+                        </td>`;
+                }).join('')}
+                </tr>`;
+            });
+
+            html += '</tbody>';
+            table.innerHTML = html;
+        }
+
+        /**
+         * Update the role selector to show current role
+         */
+        function updateRoleSelector() {
+            const selector = document.getElementById('roleSelector');
+            selector.value = getCurrentRole();
+            updateAccessSummary();
+        }
+
+        /**
+         * Simulate login as a different role
+         * 
+         * LCNC CONCEPT: Role switching demonstrates how access
+         * control works without any code changes.
+         */
+        function simulateLogin() {
+            const newRole = document.getElementById('roleSelector').value;
+            setCurrentRole(newRole);
+
+            // Update navigation
+            renderNavigation('roles');
+            renderRoleIndicator();
+            updateAccessSummary();
+
+            const roleInfo = ROLES.find(r => r.id === newRole);
+            showNotification(`Logged in as ${roleInfo.icon} ${roleInfo.name}`, 'success');
+        }
+
+        /**
+         * Update the access summary text
+         */
+        function updateAccessSummary() {
+            const currentRole = getCurrentRole();
+            const roleInfo = ROLES.find(r => r.id === currentRole) || { name: 'Unknown', icon: '👤' };
+            const moduleCount = permissions[currentRole]?.modules.length || 0;
+
+            document.getElementById('accessSummary').innerHTML = `
+                Currently logged in as: <strong>${roleInfo.icon} ${roleInfo.name}</strong>
+                (${moduleCount} modules accessible)
+            `;
+        }
+
+        /**
+         * Save permissions to localStorage
+         */
+        function savePermissions() {
+            saveToStorage('rolePermissions', permissions);
+            showNotification('✓ Permissions saved successfully!', 'success');
+        }
+
+        /**
+         * Reset to default permissions
+         */
+        function resetToDefaults() {
+            permissions = {
+                admin: {
+                    name: 'Admin',
+                    icon: '👑',
+                    modules: ['dashboard', 'modules', 'form-builder', 'workflow', 'rules', 'roles', 'reports']
+                },
+                doctor: {
+                    name: 'Doctor',
+                    icon: '👨‍⚕️',
+                    modules: ['dashboard', 'workflow', 'reports']
+                },
+                receptionist: {
+                    name: 'Receptionist',
+                    icon: '👩‍💼',
+                    modules: ['dashboard', 'reports']
+                },
+                lab_technician: {
+                    name: 'Lab Technician',
+                    icon: '🔬',
+                    modules: ['dashboard', 'reports']
+                }
+            };
+
+            renderRoleCards();
+            renderAccessMatrix();
+            updateSchemaPreview();
+
+            // Update navigation for current role
+            renderNavigation('roles');
+
+            showNotification('🔄 Reset to default permissions', 'info');
+        }
+
+        /**
+         * Update the JSON schema preview
+         */
+        function updateSchemaPreview() {
+            const preview = document.getElementById('schemaPreview');
+            preview.textContent = JSON.stringify(permissions, null, 2);
+        }
+
+        // Initial schema preview
+        setTimeout(updateSchemaPreview, 100);
+    </script>
+</body>
+
+</html>

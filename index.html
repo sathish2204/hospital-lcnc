@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital LCNC Framework - Dashboard</title>
+    <meta name="description" content="Low-Code/No-Code Hospital Management System Dashboard">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/activity.css">
+</head>
+
+<body>
+    <div class="page-wrapper">
+        <!-- Header with Logo and Navigation -->
+        <header class="header">
+            <div class="container header-content">
+                <div class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <span class="logo-text">Hospital LCNC</span>
+                </div>
+
+                <nav class="nav" id="mainNav"></nav>
+
+                <div class="role-indicator" id="roleIndicator"></div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <h1 class="page-title" id="pageTitle">👋 Welcome to Hospital LCNC</h1>
+                    <p class="page-subtitle" id="pageSubtitle">
+                        Your hospital management system
+                    </p>
+                </div>
+
+                <!-- Content based on role -->
+                <div id="mainContent">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                Hospital LCNC Framework Demo | Simple Workflow System
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/common.js"></script>
+
+    <script>
+        function initDashboard() {
+            initPage('dashboard');
+
+            const role = getCurrentRole();
+            const roleInfo = getCurrentRoleInfo();
+            const content = document.getElementById('mainContent');
+            const title = document.getElementById('pageTitle');
+            const subtitle = document.getElementById('pageSubtitle');
+
+            // Non-admin roles should go to Activity page
+            if (role !== 'admin') {
+                title.textContent = `👋 Welcome, ${roleInfo.name}!`;
+                subtitle.textContent = 'Go to your Activity page to start working';
+
+                content.innerHTML = `
+                    <div class="card" style="text-align: center; padding: 3rem;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">${roleInfo.icon}</div>
+                        <h2 style="margin-bottom: 1rem;">Ready to Start?</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                            Your work queue is waiting for you in the Activity page.
+                        </p>
+                        <a href="html/activity.html" class="btn btn-primary btn-lg">
+                            📋 Go to Activity Page →
+                        </a>
+                    </div>
+                `;
+            } else {
+                // Admin Dashboard
+                title.textContent = '📊 Admin Dashboard';
+                subtitle.textContent = 'System overview and configuration';
+
+                content.innerHTML = `
+                    <!-- Quick Stats -->
+                    <div class="stats-summary">
+                        <div class="summary-card">
+                            <div class="summary-icon">📋</div>
+                            <div class="summary-value" id="statToday">0</div>
+                            <div class="summary-label">Today's Patients</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">🩺</div>
+                            <div class="summary-value" id="statDoctor">0</div>
+                            <div class="summary-label">Doctor Queue</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">🔬</div>
+                            <div class="summary-value" id="statLab">0</div>
+                            <div class="summary-label">Lab Queue</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">✅</div>
+                            <div class="summary-value" id="statCompleted">0</div>
+                            <div class="summary-label">Completed</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <h3 style="margin-bottom: 1rem;">⚡ Quick Actions</h3>
+                    <div class="card-grid">
+                        <div class="card">
+                            <div class="card-icon">📋</div>
+                            <h3 class="card-title">Activity</h3>
+                            <p class="card-description">
+                                View and manage the patient workflow across all departments.
+                            </p>
+                            <a href="html/activity.html" class="card-link">Go to Activity →</a>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-icon">📦</div>
+                            <h3 class="card-title">Module Selector</h3>
+                            <p class="card-description">
+                                Enable or disable hospital modules.
+                            </p>
+                            <a href="html/modules.html" class="card-link">Configure Modules →</a>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-icon">📝</div>
+                            <h3 class="card-title">Form Builder</h3>
+                            <p class="card-description">
+                                Design custom forms for patient data collection.
+                            </p>
+                            <a href="html/form-builder.html" class="card-link">Build Forms →</a>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-icon">🔐</div>
+                            <h3 class="card-title">Role-Based Access</h3>
+                            <p class="card-description">
+                                Configure permissions for each role.
+                            </p>
+                            <a href="html/roles.html" class="card-link">Manage Roles →</a>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-icon">📊</div>
+                            <h3 class="card-title">Reports</h3>
+                            <p class="card-description">
+                                View patient and revenue reports.
+                            </p>
+                            <a href="html/reports.html" class="card-link">View Reports →</a>
+                        </div>
+                    </div>
+                `;
+
+                // Load live stats from queues
+                loadAdminStats();
+            }
+        }
+
+        // Check if DOM is already ready, otherwise wait for DOMContentLoaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', async () => {
+                await initRemoteStorage();
+                initDashboard();
+            });
+        } else {
+            // DOM is already ready, initialize immediately
+            (async () => {
+                await initRemoteStorage();
+                initDashboard();
+            })();
+        }
+
+        function loadAdminStats() {
+            // Load queue data
+            const doctorQueue = loadFromStorage('queue_doctor', []);
+            const labQueue = loadFromStorage('queue_lab', []);
+            const completedQueue = loadFromStorage('queue_completed', []);
+
+            // Count today's patients
+            const today = new Date().toDateString();
+            let allPatients = [...doctorQueue, ...labQueue, ...completedQueue];
+            const todayPatients = allPatients.filter(p => {
+                return new Date(p.registeredAt).toDateString() === today;
+            });
+
+            document.getElementById('statToday').textContent = todayPatients.length;
+            document.getElementById('statDoctor').textContent = doctorQueue.length;
+            document.getElementById('statLab').textContent = labQueue.length;
+            document.getElementById('statCompleted').textContent = completedQueue.length;
+        }
+    </script>
+</body>
+
+</html>

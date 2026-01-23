@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Selector - Hospital LCNC</title>
+    <meta name="description" content="Enable or disable hospital management modules through configuration">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+
+<body>
+    <!--
+    =====================================================
+    MODULE SELECTOR - CONFIGURATION-DRIVEN FEATURES
+    =====================================================
+    
+    LCNC CONCEPT: This page demonstrates how hospital administrators
+    can enable or disable entire features through a simple checkbox
+    interface. No code changes needed!
+    
+    HOW IT WORKS:
+    1. Each module is represented as a checkbox card
+    2. When saved, the configuration is stored as JSON in localStorage
+    3. Other parts of the system read this configuration to show/hide features
+    4. This simulates how a real LCNC platform would work with a database
+    
+    HACKATHON NOTE: In production, this would:
+    - Save to a real database
+    - Trigger schema migrations
+    - Update navigation across all users
+    - Enable/disable API endpoints
+    =====================================================
+    -->
+
+    <div class="page-wrapper">
+        <!-- Header -->
+        <header class="header">
+            <div class="container header-content">
+                <div class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <span class="logo-text">Hospital LCNC</span>
+                </div>
+                <nav class="nav" id="mainNav"></nav>
+                <div class="role-indicator" id="roleIndicator"></div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <h1 class="page-title">📦 Module Selector</h1>
+                    <p class="page-subtitle">
+                        Enable or disable hospital modules. Changes are saved automatically and
+                        affect the entire system configuration.
+                    </p>
+                </div>
+
+                <!-- Module Selection Grid -->
+                <!--
+                LCNC CONCEPT: Each module card is a visual toggle.
+                The checked state is saved to localStorage as JSON.
+                -->
+                <div class="module-grid" id="moduleGrid">
+                    <!-- Modules are rendered dynamically by JavaScript -->
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-md mt-lg">
+                    <button class="btn btn-primary btn-lg" id="saveBtn" onclick="saveModules()">
+                        💾 Save Configuration
+                    </button>
+                    <button class="btn btn-secondary btn-lg" onclick="resetToDefaults()">
+                        🔄 Reset to Defaults
+                    </button>
+                </div>
+
+                <!-- Configuration Preview -->
+                <div class="card mt-lg">
+                    <h3 class="card-title">📄 Configuration Preview (JSON)</h3>
+                    <p class="card-description">
+                        This shows what gets saved to the "database" (localStorage).
+                        In a real system, this would be stored in a configuration table.
+                    </p>
+                    <pre id="configPreview"
+                        style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); overflow-x: auto; font-size: 0.8rem; color: var(--text-secondary);"></pre>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                Hospital LCNC Framework Demo | Hackathon 2026
+            </div>
+        </footer>
+    </div>
+
+    <script src="../js/common.js"></script>
+
+    <script>
+        /**
+         * Module Selector Page
+         * 
+         * LCNC CONCEPT: Modules are the building blocks of the hospital system.
+         * Administrators can turn features on/off through this visual interface.
+         * The configuration drives what's available throughout the application.
+         */
+
+        // Module definitions with icons and descriptions
+        const MODULE_DEFINITIONS = [
+            {
+                id: 'registration',
+                name: 'Patient Registration',
+                icon: '📋',
+                description: 'Capture patient demographics, contact info, and medical history. Essential for all hospitals.',
+                defaultEnabled: true
+            },
+            {
+                id: 'opd',
+                name: 'OPD (Outpatient)',
+                icon: '🏥',
+                description: 'Manage outpatient appointments, consultations, and prescriptions.',
+                defaultEnabled: true
+            },
+            {
+                id: 'ipd',
+                name: 'IPD (Inpatient)',
+                icon: '🛏️',
+                description: 'Handle admissions, bed management, and inpatient care workflows.',
+                defaultEnabled: false
+            },
+            {
+                id: 'lab',
+                name: 'Laboratory',
+                icon: '🔬',
+                description: 'Order tests, track samples, and manage lab results and reports.',
+                defaultEnabled: true
+            },
+            {
+                id: 'billing',
+                name: 'Billing & Payments',
+                icon: '💰',
+                description: 'Generate bills, process payments, and manage financial records.',
+                defaultEnabled: true
+            },
+            {
+                id: 'pharmacy',
+                name: 'Pharmacy',
+                icon: '💊',
+                description: 'Manage medicine inventory, dispensing, and prescription fulfillment.',
+                defaultEnabled: false
+            }
+        ];
+
+        // Current module configuration
+        let currentConfig = [];
+
+        /**
+         * Initialize the page
+         */
+        document.addEventListener('DOMContentLoaded', async function () {
+            await initRemoteStorage();
+            initPage('modules');
+            loadModuleConfiguration();
+            renderModuleCards();
+            updateConfigPreview();
+        });
+
+        /**
+         * Load saved configuration or use defaults
+         * 
+         * LCNC CONCEPT: Configuration is loaded from storage.
+         * If no config exists, defaults are used.
+         */
+        function loadModuleConfiguration() {
+            const saved = loadFromStorage('modulesConfig');
+
+            if (saved && saved.length > 0) {
+                currentConfig = saved;
+            } else {
+                // Initialize with defaults
+                currentConfig = MODULE_DEFINITIONS.map(mod => ({
+                    id: mod.id,
+                    name: mod.name,
+                    icon: mod.icon,
+                    description: mod.description,
+                    enabled: mod.defaultEnabled
+                }));
+            }
+        }
+
+        /**
+         * Render module cards with checkboxes
+         */
+        function renderModuleCards() {
+            const grid = document.getElementById('moduleGrid');
+            grid.innerHTML = '';
+
+            currentConfig.forEach((module, index) => {
+                const card = document.createElement('div');
+                card.className = `module-card${module.enabled ? ' selected' : ''}`;
+                card.onclick = () => toggleModule(index);
+
+                card.innerHTML = `
+                    <div class="module-card-header">
+                        <div class="module-card-icon">${module.icon}</div>
+                        <input type="checkbox" 
+                               class="module-checkbox" 
+                               ${module.enabled ? 'checked' : ''}
+                               onclick="event.stopPropagation(); toggleModule(${index})">
+                    </div>
+                    <h3 class="card-title">${module.name}</h3>
+                    <p class="card-description">${module.description}</p>
+                    <div class="mt-sm" style="font-size: 0.75rem; color: var(--text-muted);">
+                        Status: <span style="color: ${module.enabled ? 'var(--secondary-color)' : 'var(--danger-color)'}">
+                            ${module.enabled ? '✓ Enabled' : '✕ Disabled'}
+                        </span>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        /**
+         * Toggle a module's enabled state
+         * 
+         * LCNC CONCEPT: Users toggle features visually.
+         * The state change is reflected immediately in the UI.
+         */
+        function toggleModule(index) {
+            currentConfig[index].enabled = !currentConfig[index].enabled;
+            renderModuleCards();
+            updateConfigPreview();
+        }
+
+        /**
+         * Save the current configuration
+         * 
+         * LCNC CONCEPT: Configuration is persisted as JSON.
+         * In production, this would save to a database.
+         */
+        function saveModules() {
+            saveToStorage('modulesConfig', currentConfig);
+            showNotification('✓ Module configuration saved successfully!', 'success');
+
+            // Log for demonstration
+            console.log('Saved configuration:', JSON.stringify(currentConfig, null, 2));
+        }
+
+        /**
+         * Reset to default configuration
+         */
+        function resetToDefaults() {
+            currentConfig = MODULE_DEFINITIONS.map(mod => ({
+                id: mod.id,
+                name: mod.name,
+                icon: mod.icon,
+                description: mod.description,
+                enabled: mod.defaultEnabled
+            }));
+
+            renderModuleCards();
+            updateConfigPreview();
+            showNotification('🔄 Reset to default configuration', 'info');
+        }
+
+        /**
+         * Update the JSON preview panel
+         * 
+         * LCNC CONCEPT: This shows users what's "under the hood".
+         * The JSON format demonstrates configuration-driven architecture.
+         */
+        function updateConfigPreview() {
+            const preview = document.getElementById('configPreview');
+            const simplified = currentConfig.map(m => ({
+                id: m.id,
+                name: m.name,
+                enabled: m.enabled
+            }));
+            preview.textContent = JSON.stringify(simplified, null, 2);
+        }
+    </script>
+</body>
+
+</html>

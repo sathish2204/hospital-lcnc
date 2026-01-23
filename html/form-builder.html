@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Builder - Hospital LCNC</title>
+    <meta name="description" content="Visual form builder for creating patient registration and data collection forms">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+
+<body>
+    <!--
+    =====================================================
+    FORM BUILDER - VISUAL FORM CREATION
+    =====================================================
+    
+    LCNC CONCEPT: This demonstrates how non-technical users can
+    create forms through a visual interface. The form schema is
+    stored as JSON, not as hardcoded HTML.
+    
+    HOW IT WORKS:
+    1. Users add fields from a palette (Text, Number, Dropdown)
+    2. Each field can be configured (label, required status)
+    3. Live preview shows how the form will look
+    4. Form schema is saved as JSON array
+    
+    SCHEMA-BASED FORMS:
+    - Forms are defined as data, not code
+    - The same schema can render forms for web, mobile, PDF
+    - Validation rules are part of the schema
+    - Easy to version control and audit changes
+    =====================================================
+    -->
+
+    <div class="page-wrapper">
+        <!-- Header -->
+        <header class="header">
+            <div class="container header-content">
+                <div class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <span class="logo-text">Hospital LCNC</span>
+                </div>
+                <nav class="nav" id="mainNav"></nav>
+                <div class="role-indicator" id="roleIndicator"></div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <h1 class="page-title">📝 Form Builder</h1>
+                    <p class="page-subtitle">
+                        Create custom forms by adding fields. Configure properties and see a live preview.
+                        Currently editing: <strong>Patient Registration Form</strong>
+                    </p>
+                </div>
+
+                <!-- Three-Column Builder Layout -->
+                <div class="builder-layout">
+                    <!-- Left Panel: Field Palette -->
+                    <div class="builder-panel">
+                        <h3 class="builder-panel-title">Field Types</h3>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--spacing-md);">
+                            Click to add a field to your form
+                        </p>
+
+                        <div class="field-palette">
+                            <button class="palette-item" onclick="addField('text')">
+                                <span>📄</span>
+                                <span>Text Field</span>
+                            </button>
+                            <button class="palette-item" onclick="addField('number')">
+                                <span>🔢</span>
+                                <span>Number Field</span>
+                            </button>
+                            <button class="palette-item" onclick="addField('dropdown')">
+                                <span>📋</span>
+                                <span>Dropdown</span>
+                            </button>
+                            <button class="palette-item" onclick="addField('email')">
+                                <span>📧</span>
+                                <span>Email Field</span>
+                            </button>
+                            <button class="palette-item" onclick="addField('date')">
+                                <span>📅</span>
+                                <span>Date Field</span>
+                            </button>
+                            <button class="palette-item" onclick="addField('textarea')">
+                                <span>📝</span>
+                                <span>Text Area</span>
+                            </button>
+                        </div>
+
+                        <div class="mt-lg">
+                            <button class="btn btn-primary" style="width: 100%;" onclick="saveForm()">
+                                💾 Save Form
+                            </button>
+                        </div>
+                        <div class="mt-sm">
+                            <button class="btn btn-secondary" style="width: 100%;" onclick="loadSampleForm()">
+                                📋 Load Sample
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Center Panel: Form Preview -->
+                    <div class="builder-panel">
+                        <h3 class="builder-panel-title">Form Preview</h3>
+
+                        <div class="form-preview" id="formPreview">
+                            <div id="emptyState"
+                                style="text-align: center; padding: var(--spacing-xl); color: var(--text-muted);">
+                                <div style="font-size: 3rem; margin-bottom: var(--spacing-md);">📝</div>
+                                <p>Click field types on the left to add fields to your form.</p>
+                            </div>
+
+                            <!-- Fields will be rendered here -->
+                            <div id="fieldsContainer"></div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: Field Properties -->
+                    <div class="builder-panel">
+                        <h3 class="builder-panel-title">Field Properties</h3>
+
+                        <div id="propertiesPanel">
+                            <div id="noFieldSelected"
+                                style="text-align: center; padding: var(--spacing-xl); color: var(--text-muted);">
+                                <div style="font-size: 2rem; margin-bottom: var(--spacing-sm);">👆</div>
+                                <p>Click a field in the preview to edit its properties.</p>
+                            </div>
+
+                            <div id="fieldProperties" class="hidden">
+                                <div class="form-group">
+                                    <label class="form-label">Field Label</label>
+                                    <input type="text" class="form-input" id="propLabel"
+                                        oninput="updateFieldProperty('label', this.value)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Placeholder Text</label>
+                                    <input type="text" class="form-input" id="propPlaceholder"
+                                        oninput="updateFieldProperty('placeholder', this.value)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label flex-between">
+                                        <span>Required Field</span>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="propRequired"
+                                                onchange="updateFieldProperty('required', this.checked)">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </label>
+                                </div>
+
+                                <div class="form-group" id="optionsGroup" style="display: none;">
+                                    <label class="form-label">Dropdown Options</label>
+                                    <textarea class="form-input" id="propOptions" rows="4"
+                                        placeholder="One option per line"
+                                        oninput="updateFieldProperty('options', this.value.split('\n'))"></textarea>
+                                </div>
+
+                                <div class="flex gap-sm mt-md">
+                                    <button class="btn btn-danger btn-sm" onclick="deleteSelectedField()">
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- JSON Schema Preview -->
+                <div class="card mt-lg">
+                    <h3 class="card-title">📄 Form Schema (JSON)</h3>
+                    <p class="card-description">
+                        This is the schema that defines your form. It can be used to render
+                        the form on any platform - web, mobile, or PDF.
+                    </p>
+                    <pre id="schemaPreview"
+                        style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); overflow-x: auto; font-size: 0.8rem; color: var(--text-secondary); max-height: 200px;"></pre>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                Hospital LCNC Framework Demo | Hackathon 2026
+            </div>
+        </footer>
+    </div>
+
+    <script src="../js/common.js"></script>
+
+    <script>
+        /**
+         * Form Builder Page
+         * 
+         * LCNC CONCEPT: Forms are built visually and stored as JSON schemas.
+         * This separates form definition from form rendering.
+         * The same schema could render forms for web, mobile, or PDFs.
+         */
+
+        // Current form fields
+        let formFields = [];
+        let selectedFieldIndex = -1;
+
+        /**
+         * Initialize the page
+         */
+        document.addEventListener('DOMContentLoaded', async function () {
+            await initRemoteStorage();
+            initPage('form-builder');
+            loadSavedForm();
+            renderFormPreview();
+        });
+
+        /**
+         * Load previously saved form from localStorage
+         */
+        function loadSavedForm() {
+            const saved = getFormSchema('patientRegistration');
+            if (saved && saved.length > 0) {
+                formFields = saved;
+            }
+        }
+
+        /**
+         * Add a new field to the form
+         * 
+         * LCNC CONCEPT: Users add fields by clicking buttons.
+         * Each field gets a unique ID and default configuration.
+         */
+        function addField(type) {
+            const fieldLabels = {
+                text: 'Text Field',
+                number: 'Number Field',
+                dropdown: 'Select Option',
+                email: 'Email Address',
+                date: 'Date',
+                textarea: 'Comments'
+            };
+
+            const newField = {
+                id: generateFieldId(),
+                type: type,
+                label: fieldLabels[type] || 'New Field',
+                placeholder: 'Enter ' + (fieldLabels[type] || 'value').toLowerCase(),
+                required: false,
+                options: type === 'dropdown' ? ['Option 1', 'Option 2', 'Option 3'] : []
+            };
+
+            formFields.push(newField);
+            renderFormPreview();
+            updateSchemaPreview();
+
+            // Select the new field
+            selectField(formFields.length - 1);
+
+            showNotification(`Added ${fieldLabels[type]}`, 'info', 1500);
+        }
+
+        /**
+         * Render the form preview
+         */
+        function renderFormPreview() {
+            const container = document.getElementById('fieldsContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            if (formFields.length === 0) {
+                emptyState.style.display = 'block';
+                container.innerHTML = '';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            container.innerHTML = '';
+
+            formFields.forEach((field, index) => {
+                const fieldEl = document.createElement('div');
+                fieldEl.className = `preview-field${index === selectedFieldIndex ? ' selected' : ''}`;
+                fieldEl.onclick = () => selectField(index);
+
+                fieldEl.innerHTML = `
+                    <div class="preview-field-header">
+                        <label class="form-label" style="margin-bottom: 0;">
+                            ${field.label}
+                            ${field.required ? '<span style="color: var(--danger-color);">*</span>' : ''}
+                        </label>
+                        <div class="preview-field-controls">
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); moveField(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); moveField(${index}, 1)" ${index === formFields.length - 1 ? 'disabled' : ''}>↓</button>
+                        </div>
+                    </div>
+                    ${renderFieldInput(field)}
+                `;
+
+                container.appendChild(fieldEl);
+            });
+        }
+
+        /**
+         * Render the appropriate input element for a field type
+         */
+        function renderFieldInput(field) {
+            switch (field.type) {
+                case 'text':
+                case 'email':
+                    return `<input type="${field.type}" class="form-input" placeholder="${field.placeholder}" disabled>`;
+                case 'number':
+                    return `<input type="number" class="form-input" placeholder="${field.placeholder}" disabled>`;
+                case 'date':
+                    return `<input type="date" class="form-input" disabled>`;
+                case 'textarea':
+                    return `<textarea class="form-input" rows="3" placeholder="${field.placeholder}" disabled></textarea>`;
+                case 'dropdown':
+                    return `
+                        <select class="form-select" disabled>
+                            <option value="">${field.placeholder}</option>
+                            ${field.options.map(opt => `<option>${opt}</option>`).join('')}
+                        </select>
+                    `;
+                default:
+                    return `<input type="text" class="form-input" placeholder="${field.placeholder}" disabled>`;
+            }
+        }
+
+        /**
+         * Select a field to edit its properties
+         */
+        function selectField(index) {
+            selectedFieldIndex = index;
+            renderFormPreview();
+            showFieldProperties();
+        }
+
+        /**
+         * Show the properties panel for the selected field
+         */
+        function showFieldProperties() {
+            if (selectedFieldIndex < 0 || !formFields[selectedFieldIndex]) {
+                document.getElementById('noFieldSelected').classList.remove('hidden');
+                document.getElementById('fieldProperties').classList.add('hidden');
+                return;
+            }
+
+            const field = formFields[selectedFieldIndex];
+
+            document.getElementById('noFieldSelected').classList.add('hidden');
+            document.getElementById('fieldProperties').classList.remove('hidden');
+
+            // Populate property fields
+            document.getElementById('propLabel').value = field.label;
+            document.getElementById('propPlaceholder').value = field.placeholder;
+            document.getElementById('propRequired').checked = field.required;
+
+            // Show/hide dropdown options
+            const optionsGroup = document.getElementById('optionsGroup');
+            if (field.type === 'dropdown') {
+                optionsGroup.style.display = 'block';
+                document.getElementById('propOptions').value = field.options.join('\n');
+            } else {
+                optionsGroup.style.display = 'none';
+            }
+        }
+
+        /**
+         * Update a property of the selected field
+         * 
+         * LCNC CONCEPT: Property changes are immediately reflected in the preview.
+         * This provides instant visual feedback to the user.
+         */
+        function updateFieldProperty(property, value) {
+            if (selectedFieldIndex < 0) return;
+
+            formFields[selectedFieldIndex][property] = value;
+            renderFormPreview();
+            updateSchemaPreview();
+        }
+
+        /**
+         * Move a field up or down in the order
+         */
+        function moveField(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= formFields.length) return;
+
+            // Swap fields
+            const temp = formFields[index];
+            formFields[index] = formFields[newIndex];
+            formFields[newIndex] = temp;
+
+            // Update selection if needed
+            if (selectedFieldIndex === index) {
+                selectedFieldIndex = newIndex;
+            } else if (selectedFieldIndex === newIndex) {
+                selectedFieldIndex = index;
+            }
+
+            renderFormPreview();
+            updateSchemaPreview();
+        }
+
+        /**
+         * Delete the currently selected field
+         */
+        function deleteSelectedField() {
+            if (selectedFieldIndex < 0) return;
+
+            formFields.splice(selectedFieldIndex, 1);
+            selectedFieldIndex = -1;
+
+            renderFormPreview();
+            showFieldProperties();
+            updateSchemaPreview();
+
+            showNotification('Field deleted', 'info', 1500);
+        }
+
+        /**
+         * Save the form schema to localStorage
+         * 
+         * LCNC CONCEPT: The form is saved as a JSON schema.
+         * This schema can be used to render forms anywhere.
+         */
+        function saveForm() {
+            saveFormSchema('patientRegistration', formFields);
+            showNotification('✓ Form saved successfully!', 'success');
+        }
+
+        /**
+         * Load a sample patient registration form
+         */
+        function loadSampleForm() {
+            formFields = [
+                {
+                    id: generateFieldId(),
+                    type: 'text',
+                    label: 'Full Name',
+                    placeholder: 'Enter patient full name',
+                    required: true,
+                    options: []
+                },
+                {
+                    id: generateFieldId(),
+                    type: 'number',
+                    label: 'Age',
+                    placeholder: 'Enter age in years',
+                    required: true,
+                    options: []
+                },
+                {
+                    id: generateFieldId(),
+                    type: 'dropdown',
+                    label: 'Gender',
+                    placeholder: 'Select gender',
+                    required: true,
+                    options: ['Male', 'Female', 'Other']
+                },
+                {
+                    id: generateFieldId(),
+                    type: 'text',
+                    label: 'Phone Number',
+                    placeholder: 'Enter contact number',
+                    required: true,
+                    options: []
+                },
+                {
+                    id: generateFieldId(),
+                    type: 'email',
+                    label: 'Email Address',
+                    placeholder: 'Enter email (optional)',
+                    required: false,
+                    options: []
+                },
+                {
+                    id: generateFieldId(),
+                    type: 'dropdown',
+                    label: 'Blood Group',
+                    placeholder: 'Select blood group',
+                    required: false,
+                    options: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
+                },
+                {
+                    id: generateFieldId(),
+                    type: 'textarea',
+                    label: 'Medical History',
+                    placeholder: 'Enter any existing conditions or allergies',
+                    required: false,
+                    options: []
+                }
+            ];
+
+            selectedFieldIndex = -1;
+            renderFormPreview();
+            showFieldProperties();
+            updateSchemaPreview();
+
+            showNotification('📋 Sample form loaded', 'success');
+        }
+
+        /**
+         * Update the JSON schema preview
+         */
+        function updateSchemaPreview() {
+            const preview = document.getElementById('schemaPreview');
+            preview.textContent = JSON.stringify(formFields, null, 2);
+        }
+    </script>
+</body>
+
+</html>
