@@ -58,6 +58,11 @@ function saveToStorage(key, data) {
     // Update local cache immediately (synchronous)
     DB_CACHE[key] = data;
 
+    // Also save to localStorage as a secondary backup
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) { }
+
     // Sync to database in background
     fetch(`${API_BASE_URL}/api/store/${key}`, {
         method: 'POST',
@@ -65,7 +70,15 @@ function saveToStorage(key, data) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({ value: data }),
-    }).catch(error => console.error('Background sync failed:', error));
+    }).then(response => {
+        if (!response.ok) throw new Error('Server responded with ' + response.status);
+    }).catch(error => {
+        console.error('Background sync failed:', error);
+        // showNotification is defined later in the file, but will be available when called
+        if (typeof showNotification === 'function') {
+            showNotification('⚠️ Database sync failed. Changes saved locally only.', 'error');
+        }
+    });
 
     return true;
 }

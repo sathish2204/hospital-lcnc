@@ -65,6 +65,11 @@ module.exports = async (req, res) => {
         return res.status(405).json({ error: 'Method Not Allowed' });
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({
+            error: 'Internal Server Error',
+            details: err.message,
+            stack: err.stack,
+            env_check: process.env.DATABASE_URL ? 'DB_URL_PRESENT' : 'DB_URL_MISSING'
+        });
     }
 };
