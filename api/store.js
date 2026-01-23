@@ -4,12 +4,7 @@ const { pool, initDb } = require('../db');
 let isInitialized = false;
 
 module.exports = async (req, res) => {
-    // Ensure table exists
-    if (!isInitialized) {
-        await initDb();
-        isInitialized = true;
-    }
-    // Handle CORS if needed (Vercel usually does this, but good to be explicit)
+    // Handle CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -18,12 +13,20 @@ module.exports = async (req, res) => {
         return res.status(200).end();
     }
 
-    // Extract path after /api/store
-    // Vercel path will be like /api/store?key=... or we can use path parsing
-    // Extract key from the URL path
+    // Ensure table exists
+    if (!isInitialized) {
+        try {
+            await initDb();
+            isInitialized = true;
+        } catch (err) {
+            console.error('Initial DB Error:', err);
+            // Don't return here, attempt to proceed or let the query fail later
+        }
+    }
+
+    // Extract key from query param (set by vercel.json) or URL path
     const urlParts = req.url.split('?')[0].split('/').filter(Boolean);
-    // URL: /api/store/someKey -> parts: ['api', 'store', 'someKey']
-    const key = urlParts[2] || null;
+    const key = req.query.key || urlParts[2] || null;
 
     try {
         if (req.method === 'GET') {
@@ -47,13 +50,13 @@ module.exports = async (req, res) => {
         }
 
         if (req.method === 'POST') {
-            if (!key) return res.status(400).json({ error: 'Key required' });
+            if (!key) return res.status(400).json({ error: 'Key required', path: req.url, query: req.query });
             const { value } = req.body;
             await pool.query(
                 'INSERT INTO kv_store (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
                 [key, JSON.stringify(value)]
             );
-            return res.json({ success: true });
+            return res.json({ success: true, key: key });
         }
 
         if (req.method === 'DELETE') {
@@ -68,8 +71,8 @@ module.exports = async (req, res) => {
         return res.status(500).json({
             error: 'Internal Server Error',
             details: err.message,
-            stack: err.stack,
-            env_check: process.env.DATABASE_URL ? 'DB_URL_PRESENT' : 'DB_URL_MISSING'
+            env_check: process.env.DATABASE_URL ? 'DB_URL_PRESENT' : 'DB_URL_MISSING',
+            db_config_length: process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0
         });
     }
 };

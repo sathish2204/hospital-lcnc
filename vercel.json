@@ -1,8 +1,8 @@
 {
     "rewrites": [
         {
-            "source": "/api/store/:key*",
-            "destination": "/api/store"
+            "source": "/api/store/:key",
+            "destination": "/api/store?key=:key"
         }
     ]
 }
